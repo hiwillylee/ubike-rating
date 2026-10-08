@@ -1,0 +1,4 @@
+# 複製成 app-config.properties，填入 sam deploy 的 Outputs
+apiUrl=https://xxxxxxxx.lambda-url.ap-northeast-1.on.aws
+cognitoRegion=ap-northeast-1
+cognitoClientId=xxxxxxxxxxxxxxxxxxxxxxxxxx

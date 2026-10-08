@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: YouBike 車況評價系統（只用 AWS Always Free 服務）
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: 有任何費用產生時通知的 Email
+  AllowedOrigin:
+    Type: String
+    Default: "*"
+    Description: 允許呼叫 API 的網頁來源（例如 https://<帳號>.github.io），預設全部允許
+  ReservedConcurrency:
+    Type: Number
+    Default: 0
+    Description: Lambda 保留併發數上限（0 = 不設定；新帳號併發配額只有 10 時必須設 0）
+  PerMinuteLimit:
+    Type: Number
+    Default: 3
+  SameBikeCooldownMinutes:
+    Type: Number
+    Default: 30
+  DailySuspectThreshold:
+    Type: Number
+    Default: 60
+  HourlyViolationThreshold:
+    Type: Number
+    Default: 5
+
+Conditions:
+  HasReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: ubike-rating-users
+      UserPoolTier: LITE
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireUppercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailSubject: "YouBike 車況評價 驗證碼"
+        EmailMessage: "你的驗證碼是 {####}"
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: ubike-rating-app
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      RefreshTokenValidity: 365
+      IdTokenValidity: 1
+      AccessTokenValidity: 1
+      TokenValidityUnits:
+        RefreshToken: days
+        IdToken: hours
+        AccessToken: hours
+
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ubike
+      # Provisioned 模式才在 Always Free（25 RCU / 25 WCU）內，On-demand 不是
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 10
+        WriteCapacityUnits: 10
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ubike-rating-api
+      CodeUri: .
+      Handler: handler.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 10
+      ReservedConcurrentExecutions: !If [HasReservedConcurrency, !Ref ReservedConcurrency, !Ref AWS::NoValue]
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref Table
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          PER_MINUTE_LIMIT: !Ref PerMinuteLimit
+          SAME_BIKE_COOLDOWN_MINUTES: !Ref SameBikeCooldownMinutes
+          DAILY_SUSPECT_THRESHOLD: !Ref DailySuspectThreshold
+          HOURLY_VIOLATION_THRESHOLD: !Ref HourlyViolationThreshold
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Table
+      # Function URL 已包含在 Lambda 免費額度內；API Gateway 只有前 12 個月免費
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins: [!Ref AllowedOrigin]
+          AllowMethods: [GET, POST]
+          AllowHeaders: [authorization, content-type]
+          MaxAge: 86400
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints: [src/handler.ts]
+        Format: esm
+        OutExtension: [.js=.mjs]
+        Target: es2022
+        Minify: true
+        Sourcemap: false
+        # Node.js 22 執行環境已內建 AWS SDK v3
+        External: ["@aws-sdk/*"]
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ApiFunction}
+      RetentionInDays: 7
+
+  CostAlert:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: ubike-rating-any-cost
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: 1
+          Unit: USD
+      NotificationsWithSubscribers:
+        # 實際花費達 1 USD 的 1%（= 0.01 USD）就寄信
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 1
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+
+Outputs:
+  ApiUrl:
+    Description: API 網址（填到網頁與 Android 設定）
+    Value: !GetAtt ApiFunctionUrl.FunctionUrl
+  Region:
+    Value: !Ref AWS::Region
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
