@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { recognizeBikeId, warmUpOcr } from "../ocr";
+// OCR（ONNX Runtime + 模型）很大，進到掃描頁才載入
+const loadOcr = () => import("../ocr");
 
 interface Props {
   onFound: (bikeId: string) => void;
@@ -19,7 +20,9 @@ export function Scan({ onFound }: Props) {
   const [manual, setManual] = useState("");
 
   useEffect(() => {
-    warmUpOcr().catch(() => {});
+    loadOcr()
+      .then((m) => m.warmUpOcr())
+      .catch(() => {});
     let stream: MediaStream | null = null;
     (async () => {
       try {
@@ -60,6 +63,7 @@ export function Scan({ onFound }: Props) {
     setBusy(true);
     setCandidates(null);
     try {
+      const { recognizeBikeId } = await loadOcr();
       const ids = await recognizeBikeId(crop);
       setCandidates(ids);
     } catch {

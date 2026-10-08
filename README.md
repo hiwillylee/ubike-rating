@@ -12,7 +12,7 @@
 
 ```
 backend/   AWS SAM：Cognito + Lambda(Function URL) + DynamoDB，全用 Always Free 服務
-web/       手機網頁版（給 iOS），Vite + React + Tesseract.js
+web/       手機網頁版（給 iOS），Vite + React + PaddleOCR（ONNX Runtime Web）
 android/   Android 原生 App，Kotlin + Compose + CameraX + ML Kit
 shared/    兩端共用的車號解析測試案例
 docs/      API 規格
@@ -95,6 +95,12 @@ cd web && npm test
 ```bash
 cd android && ./gradlew testDebugUnitTest
 ```
+
+## 車號辨識
+
+- 網頁版用 PaddleOCR（PP-OCRv4）。實拍照片測試中，Tesseract.js 4 張只對 1 張，PaddleOCR 4 張全對。
+- 車號是綠色字，所以會先用「綠的程度」（G 減去 R、B 中較大者）做前處理，把白色車架、黃色擋泥板和背景濾掉；沒有結果再用原圖辨識。
+- 模型放在 `web/public/models/`。手機第一次掃描時大約要下載 22 MB（壓縮後），之後從瀏覽器快取讀取。
 
 ## 車號格式
 
