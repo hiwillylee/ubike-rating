@@ -55,6 +55,34 @@ export function Scan({ onFound }: Props) {
 // 框外反白但看得到畫面，框內原色；只有框內會被辨識。
 
 const GUIDE_RATIO = 0.6; // 框的高寬比（上下兩行車號）
+
+// iOS Safari 每次呼叫 getUserMedia 都可能重新詢問權限，所以關閉拍攝畫面後先保留相機一段時間，
+// 期間再打開就直接沿用；離開頁面時立即釋放。
+const KEEP_CAMERA_MS = 2 * 60 * 1000;
+let sharedStream: MediaStream | null = null;
+let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+
+function stopCamera() {
+  sharedStream?.getTracks().forEach((t) => t.stop());
+  sharedStream = null;
+}
+
+async function acquireCamera(): Promise<MediaStream> {
+  clearTimeout(releaseTimer);
+  if (sharedStream?.getVideoTracks().some((t) => t.readyState === "live")) return sharedStream;
+  sharedStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment", width: { ideal: 1920 } },
+    audio: false,
+  });
+  return sharedStream;
+}
+
+function releaseCameraLater() {
+  clearTimeout(releaseTimer);
+  releaseTimer = setTimeout(stopCamera, KEEP_CAMERA_MS);
+}
+
+if (typeof window !== "undefined") window.addEventListener("pagehide", stopCamera);
 const OUT_W = 640;
 
 type Phase = { kind: "live" } | { kind: "busy"; shot: string } | { kind: "done"; shot: string; ids: string[] };
@@ -67,16 +95,12 @@ function Capture({ onFound, onClose }: { onFound: (id: string) => void; onClose:
 
   // 開啟相機；全螢幕期間鎖住背景捲動
   useEffect(() => {
-    let stream: MediaStream | null = null;
     let cancelled = false;
     document.body.style.overflow = "hidden";
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1920 } },
-          audio: false,
-        });
-        if (cancelled) return stream.getTracks().forEach((t) => t.stop());
+        const stream = await acquireCamera();
+        if (cancelled) return;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
@@ -87,7 +111,7 @@ function Capture({ onFound, onClose }: { onFound: (id: string) => void; onClose:
     })();
     return () => {
       cancelled = true;
-      stream?.getTracks().forEach((t) => t.stop());
+      releaseCameraLater();
       document.body.style.overflow = "";
     };
   }, []);

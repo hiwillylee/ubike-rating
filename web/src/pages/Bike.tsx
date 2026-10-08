@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError, getBike, rateBike, type BikeInfo } from "../api";
 import { currentEmail } from "../auth";
 import { METRICS, type MetricKey, type Scores } from "../config";
+import { StarDisplay, StarInput } from "../Stars";
 
 interface Props {
   bikeId: string;
@@ -9,7 +10,6 @@ interface Props {
   onBack: () => void;
 }
 
-const levelClass = (v: number) => (v >= 3.5 ? "good" : v >= 2.5 ? "ok" : v >= 1.5 ? "warn" : "bad");
 
 export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
   const [info, setInfo] = useState<BikeInfo | null>(null);
@@ -67,15 +67,11 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
               const v = info.scores![m.key as MetricKey];
               return (
                 <div key={m.key} className="metric">
-                  <div className="metric-head">
-                    <span>{m.label}</span>
-                    <strong className={levelClass(v)}>
-                      {v.toFixed(1)} · {m.levels[Math.round(v) - 1]}
-                    </strong>
-                  </div>
-                  <div className="bar">
-                    <div className={`fill ${levelClass(v)}`} style={{ width: `${(v / 4) * 100}%` }} />
-                  </div>
+                  <span className="metric-label">{m.label}</span>
+                  <StarDisplay value={v} size={22} />
+                  <span className="metric-value">
+                    {v.toFixed(1)} · {m.levels[Math.round(v) - 1]}
+                  </span>
                 </div>
               );
             })}
@@ -86,23 +82,16 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
 
       <section className="card">
         <h2>我要評分</h2>
-        {METRICS.map((m) => (
-          <div key={m.key} className="rate-row">
-            <div className="rate-label">{m.label}</div>
-            <div className="levels">
-              {m.levels.map((label, i) => (
-                <button
-                  key={label}
-                  className={form[m.key] === i + 1 ? `level selected ${levelClass(i + 1)}` : "level"}
-                  onClick={() => setForm({ ...form, [m.key]: i + 1 })}
-                >
-                  <b>{i + 1}</b>
-                  <small>{label}</small>
-                </button>
-              ))}
+        {METRICS.map((m) => {
+          const v = form[m.key];
+          return (
+            <div key={m.key} className="rate-row">
+              <div className="rate-label">{m.label}</div>
+              <StarInput value={v} labels={m.levels} onChange={(n) => setForm({ ...form, [m.key]: n })} />
+              <div className="rate-level">{v ? m.levels[v - 1] : "點星星評分"}</div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {message && <p className={message.ok ? "success" : "error"}>{message.text}</p>}
         <button className="primary full" disabled={!complete || submitting} onClick={submit}>
           {submitting ? "送出中…" : currentEmail() ? "送出評分" : "登入後送出"}
@@ -126,8 +115,8 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
                 <tr key={r.at}>
                   <td>{new Date(r.at).toLocaleString("zh-TW", { dateStyle: "short", timeStyle: "short" })}</td>
                   {METRICS.map((m) => (
-                    <td key={m.key} className={levelClass(r[m.key])}>
-                      {r[m.key]}
+                    <td key={m.key}>
+                      <StarDisplay value={r[m.key]} size={12} />
                     </td>
                   ))}
                 </tr>
