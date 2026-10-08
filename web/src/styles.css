@@ -10,6 +10,8 @@
   --ok: #74b816;
   --warn: #f08c00;
   --bad: #e03131;
+  --star: #f5a400;
+  --star-empty: #b9b9b2;
   color-scheme: light dark;
 }
 
@@ -24,6 +26,8 @@
     --ok: #a9e34b;
     --warn: #ffa94d;
     --bad: #ff6b6b;
+    --star: #ffb81f;
+    --star-empty: #5c5c55;
   }
 }
 
@@ -348,70 +352,87 @@ input {
 }
 
 .metric {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "label value" "stars stars";
+  row-gap: 4px;
   margin-bottom: 14px;
 }
 
-.metric-head {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
+.metric-label { grid-area: label; }
+.metric .stars { grid-area: stars; }
+.metric-value {
+  grid-area: value;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.bar {
-  height: 10px;
-  border-radius: 5px;
-  background: var(--border);
+/* 星星：外框 + 依比例裁切的實心 */
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.star {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+
+.star svg {
+  display: block;
+}
+
+.star-outline {
+  fill: none;
+  stroke: var(--star-empty);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.star-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
   overflow: hidden;
 }
 
-.fill {
-  height: 100%;
-  border-radius: 5px;
+.star-fill path {
+  fill: var(--star);
+  stroke: var(--star);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
 }
 
-.fill.good { background: var(--good); }
-.fill.ok { background: var(--ok); }
-.fill.warn { background: var(--warn); }
-.fill.bad { background: var(--bad); }
-strong.good, td.good { color: var(--good); }
-strong.ok, td.ok { color: var(--ok); }
-strong.warn, td.warn { color: var(--warn); }
-strong.bad, td.bad { color: var(--bad); }
-
-.rate-row {
-  margin-bottom: 14px;
-}
-
-.rate-label {
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-
-.levels {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.stars-input {
   gap: 6px;
 }
 
-.level {
-  flex-direction: column;
-  padding: 8px 4px;
-  gap: 2px;
+.stars-input button {
+  padding: 2px;
+  border: none;
+  background: none;
+  border-radius: 8px;
 }
 
-.level small {
-  font-size: 11px;
+.stars-input button:active .star {
+  transform: scale(0.9);
+}
+
+.rate-row {
+  margin-bottom: 16px;
+}
+
+.rate-label {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.rate-level {
+  margin-top: 2px;
+  font-size: 13px;
   color: var(--muted);
 }
-
-.level.selected {
-  border-width: 2px;
-}
-
-.level.selected.good { border-color: var(--good); }
-.level.selected.ok { border-color: var(--ok); }
-.level.selected.warn { border-color: var(--warn); }
-.level.selected.bad { border-color: var(--bad); }
 
 .recent {
   width: 100%;
