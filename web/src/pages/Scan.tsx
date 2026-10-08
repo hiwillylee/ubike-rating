@@ -20,7 +20,6 @@ export function Scan({ onFound }: Props) {
   return (
     <div className="page">
       <h1>查詢車況</h1>
-      <p className="hint">拍下車身上的車號（上 2 碼、下 5 碼），或直接輸入。</p>
 
       <button className="primary full scan-start" onClick={() => setCapturing(true)}>
         📷 拍攝車號
@@ -36,7 +35,7 @@ export function Scan({ onFound }: Props) {
         <input
           inputMode="numeric"
           maxLength={7}
-          placeholder="手動輸入 7 碼車號"
+          placeholder="或手動輸入 7 碼車號"
           value={manual}
           onChange={(e) => setManual(e.target.value.replace(/\D/g, ""))}
         />
@@ -106,7 +105,7 @@ function Capture({ onFound, onClose }: { onFound: (id: string) => void; onClose:
           await videoRef.current.play();
         }
       } catch {
-        setCamError("無法開啟相機，請允許相機權限，或關閉後手動輸入車號。");
+        setCamError("開不了相機，請允許相機權限");
       }
     })();
     return () => {
@@ -168,9 +167,8 @@ function Capture({ onFound, onClose }: { onFound: (id: string) => void; onClose:
           {!live && <img className="capture-shot" src={phase.shot} alt="拍下的車號" />}
         </div>
         <p className="capture-tip">
-          {camError ?? (live ? "請將車號對準框內" : phase.kind === "busy" ? "辨識中…" : "")}
+          {camError ?? (live ? "請將車號對準框內" : phase.kind === "busy" ? "辨識中，稍等一下…" : "")}
         </p>
-        {live && !camError && <p className="capture-sub">上 2 碼、下 5 碼，讓車號大致填滿框</p>}
       </div>
 
       <div className="capture-top">
@@ -188,12 +186,11 @@ function Capture({ onFound, onClose }: { onFound: (id: string) => void; onClose:
       ) : (
         <div className="capture-sheet">
           {phase.kind === "busy" ? (
-            <p className="hint">辨識中…（第一次需要下載辨識模型，請稍候）</p>
+            <p className="hint">辨識中，稍等一下…</p>
           ) : phase.ids.length === 0 ? (
-            <p>沒辨識到車號，請重拍（靠近一點、避開反光），或關閉後手動輸入。</p>
+            <p>沒認出來，靠近點再拍一次</p>
           ) : (
             <>
-              <p>辨識結果（點選正確的車號）：</p>
               <div className="row wrap">
                 {phase.ids.map((id) => (
                   <button key={id} className="chip" onClick={() => onFound(id)}>

@@ -37,7 +37,7 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
       const updated = await rateBike(bikeId, form as Scores);
       setInfo(updated);
       setForm({});
-      setMessage({ ok: true, text: "已送出，感謝回報！" });
+      setMessage({ ok: true, text: "已送出，謝謝！" });
     } catch (e) {
       const err = e as ApiError;
       if (err.status === 401) return onNeedLogin();
@@ -60,7 +60,7 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
         <h2>目前車況</h2>
         {loadError && <p className="error">{loadError}</p>}
         {!info && !loadError && <p className="hint">載入中…</p>}
-        {info && !info.scores && <p className="hint">這台車還沒有人評分，來當第一個吧！</p>}
+        {info && !info.scores && <p className="hint">還沒人評分，來當第一個吧</p>}
         {info?.scores && (
           <>
             {METRICS.map((m) => {
@@ -75,7 +75,6 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
                 </div>
               );
             })}
-            <p className="hint">依最新 {info.count} 筆評分加權計算（越新權重越高）</p>
           </>
         )}
       </section>
@@ -88,7 +87,7 @@ export function Bike({ bikeId, onNeedLogin, onBack }: Props) {
             <div key={m.key} className="rate-row">
               <div className="rate-label">{m.label}</div>
               <StarInput value={v} labels={m.levels} onChange={(n) => setForm({ ...form, [m.key]: n })} />
-              <div className="rate-level">{v ? m.levels[v - 1] : "點星星評分"}</div>
+              {v && <div className="rate-level">{m.levels[v - 1]}</div>}
             </div>
           );
         })}
