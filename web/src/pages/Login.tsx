@@ -22,7 +22,7 @@ export function Login({ onDone }: { onDone: () => void }) {
       const err = e as AuthError;
       if (err.code === "UserNotConfirmedException") {
         setMode("confirm");
-        setInfo("請輸入 Email 收到的驗證碼");
+        setInfo("請輸入驗證碼");
       } else {
         setError(err.message);
       }
@@ -38,7 +38,7 @@ export function Login({ onDone }: { onDone: () => void }) {
       act(async () => {
         await signUp(email, password);
         setMode("confirm");
-        setInfo("驗證碼已寄到你的 Email");
+        setInfo("驗證碼已寄到你的信箱");
       });
     if (mode === "confirm")
       act(async () => {
@@ -54,7 +54,6 @@ export function Login({ onDone }: { onDone: () => void }) {
         ← 返回
       </button>
       <h1>{mode === "signin" ? "登入" : mode === "signup" ? "註冊" : "驗證 Email"}</h1>
-      <p className="hint">評分需要登入，查詢車況不用。</p>
 
       <form className="card form" onSubmit={onSubmit}>
         <label>
