@@ -4,3 +4,5 @@ local.properties
 app-config.properties
 .idea/
 *.iml
+# 實拍車號照片含站點標籤，只能暫放測試用，不進版控
+app/src/androidTest/assets/bikeocr/

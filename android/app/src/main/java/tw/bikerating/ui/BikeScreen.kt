@@ -75,7 +75,7 @@ fun BikeScreen(
             try {
                 info = api.rate(bikeId, form.toMap())
                 form.clear()
-                message = true to "已送出，感謝回報！"
+                message = true to "已送出，謝謝！"
             } catch (e: AppException) {
                 if (e.status == 401) onNeedLogin() else message = false to (e.message ?: "發生錯誤")
             } finally {
@@ -98,31 +98,21 @@ fun BikeScreen(
                 when {
                     loadError != null -> Text(loadError!!, color = MaterialTheme.colorScheme.error)
                     i == null -> Text("載入中…")
-                    i.scores == null -> Text("這台車還沒有人評分，來當第一個吧！")
+                    i.scores == null -> Text("還沒人評分，來當第一個吧")
                     else -> {
                         METRICS.forEach { m ->
                             val v = i.scores[m.key]
-                            Column {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(m.label)
                                     Text(
                                         "%.1f · %s".format(v, m.levels[Math.round(v).toInt().coerceIn(1, 4) - 1]),
-                                        color = levelColor(v), fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Bold,
                                     )
                                 }
-                                LinearProgressIndicator(
-                                    progress = { (v / 4).toFloat() },
-                                    color = levelColor(v),
-                                    modifier = Modifier.fillMaxWidth().height(8.dp).padding(top = 4.dp),
-                                    drawStopIndicator = {},
-                                )
+                                StarDisplay(v, size = 22.dp)
                             }
                         }
-                        Text(
-                            "依最新 ${i.count} 筆評分加權計算（越新權重越高）",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }
@@ -132,23 +122,16 @@ fun BikeScreen(
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("我要評分", style = MaterialTheme.typography.titleMedium)
                 METRICS.forEach { m ->
-                    Text(m.label, style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        m.levels.forEachIndexed { idx, label ->
-                            val score = idx + 1
-                            val selected = form[m.key] == score
-                            OutlinedButton(
-                                onClick = { form[m.key] = score },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp, 8.dp),
-                                border = BorderStroke(if (selected) 2.dp else 1.dp,
-                                    if (selected) levelColor(score.toDouble()) else MaterialTheme.colorScheme.outlineVariant),
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("$score", fontWeight = FontWeight.Bold)
-                                    Text(label, fontSize = 10.sp, maxLines = 1)
-                                }
-                            }
+                    val v = form[m.key]
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(m.label, style = MaterialTheme.typography.bodyMedium)
+                        StarInput(v, m.levels, onChange = { form[m.key] = it })
+                        if (v != null) {
+                            Text(
+                                m.levels[v - 1],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                 }
@@ -173,7 +156,7 @@ fun BikeScreen(
                         Row {
                             Text(timeFmt.format(Instant.parse(r.at)), Modifier.weight(1.4f))
                             METRICS.forEach { m ->
-                                Text("${r[m.key]}", Modifier.weight(1f), color = levelColor(r[m.key].toDouble()))
+                                StarDisplay(r[m.key].toDouble(), size = 12.dp, modifier = Modifier.weight(1f))
                             }
                         }
                     }

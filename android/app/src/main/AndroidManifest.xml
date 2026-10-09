@@ -6,16 +6,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:name=".BikeApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
-
-        <!-- 讓 ML Kit 在安裝時就下載文字辨識模型 -->
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="ocr" />
 
         <activity
             android:name=".ui.MainActivity"
