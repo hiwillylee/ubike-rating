@@ -24,6 +24,7 @@ import tw.bikerating.data.AuthRepo
 
 sealed interface Screen {
     data object Scan : Screen
+    data object Capture : Screen
     data class Bike(val id: String) : Screen
     data object Login : Screen
 }
@@ -50,6 +51,15 @@ fun App(auth: AuthRepo, api: ApiClient) {
 
     BackHandler(enabled = stack.size > 1) { back() }
 
+    // 全螢幕掃描不放在 Scaffold 裡；辨識到車號後以車輛頁取代掃描畫面，返回時回到首頁
+    if (screen == Screen.Capture) {
+        CaptureScreen(
+            onFound = { id -> back(); go(Screen.Bike(id)) },
+            onClose = { back() },
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -70,7 +80,8 @@ fun App(auth: AuthRepo, api: ApiClient) {
     ) { padding ->
         val m = Modifier.padding(padding)
         when (screen) {
-            Screen.Scan -> ScanScreen(m, onFound = { go(Screen.Bike(it)) })
+            Screen.Scan -> ScanScreen(m, onFound = { go(Screen.Bike(it)) }, onCapture = { go(Screen.Capture) })
+            Screen.Capture -> Unit
             is Screen.Bike -> BikeScreen(m, screen.id, api, isLoggedIn = email != null,
                 onNeedLogin = { go(Screen.Login) }, onBack = { back() })
             Screen.Login -> LoginScreen(m, auth, onDone = { back() })

@@ -22,8 +22,14 @@ android {
         applicationId = "tw.bikerating"
         minSdk = 26
         targetSdk = 35
+
+        // 只打包手機用的 ARM 原生函式庫（ONNX Runtime），x86 模擬器不支援
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
         versionCode = 1
         versionName = "1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_URL", cfg("apiUrl"))
         buildConfigField("String", "COGNITO_REGION", cfg("cognitoRegion", "ap-northeast-1"))
@@ -61,7 +67,7 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
-    implementation(libs.mlkit.text)
+    implementation(libs.onnxruntime.android)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
@@ -69,4 +75,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }

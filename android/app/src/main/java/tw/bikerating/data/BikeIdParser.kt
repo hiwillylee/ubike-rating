@@ -18,7 +18,7 @@ object BikeIdParser {
         'I' to '1', 'l' to '1', '|' to '1', 'i' to '1',
         'Z' to '2', 'z' to '2',
         'S' to '5', 's' to '5',
-        'G' to '6', 'b' to '6',
+        'b' to '6', // 不收 G→6：實拍時破損的 0 被讀成 G，會造出錯的車號
         'T' to '7',
         'B' to '8',
         'g' to '9', 'q' to '9',

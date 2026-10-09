@@ -45,7 +45,7 @@ fun LoginScreen(modifier: Modifier, auth: AuthRepo, onDone: () -> Unit) {
         } catch (e: AppException) {
             if (e.code == "UserNotConfirmedException") {
                 mode = Mode.Confirm
-                info = "請輸入 Email 收到的驗證碼"
+                info = "請輸入驗證碼"
             } else {
                 error = e.message
             }
@@ -59,7 +59,7 @@ fun LoginScreen(modifier: Modifier, auth: AuthRepo, onDone: () -> Unit) {
         Mode.SignUp -> act {
             auth.signUp(email, password)
             mode = Mode.Confirm
-            info = "驗證碼已寄到你的 Email"
+            info = "驗證碼已寄到你的信箱"
         }
         Mode.Confirm -> act {
             auth.confirmSignUp(email, code)
@@ -73,7 +73,6 @@ fun LoginScreen(modifier: Modifier, auth: AuthRepo, onDone: () -> Unit) {
             when (mode) { Mode.SignIn -> "登入"; Mode.SignUp -> "註冊"; Mode.Confirm -> "驗證 Email" },
             style = MaterialTheme.typography.headlineSmall,
         )
-        Text("評分需要登入，查詢車況不用。", color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         OutlinedTextField(
             value = email, onValueChange = { email = it.trim() }, label = { Text("Email") },

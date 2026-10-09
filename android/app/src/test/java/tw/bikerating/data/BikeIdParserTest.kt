@@ -31,6 +31,16 @@ class BikeIdParserTest {
         assertEquals("20", BikeIdParser.toDigits("YouBike 2.0"))
     }
 
+    /** 實拍：破損的 0 被 OCR 讀成 G，不能把它當成 6 造出別台車的車號 */
+    @Test
+    fun doesNotMapGTo6() {
+        val lines = listOf(
+            BikeIdParser.OcrLine("13", 275, 84, 408, 182),
+            BikeIdParser.OcrLine("0G474", 155, 141, 483, 312),
+        )
+        assertEquals(emptyList<String>(), BikeIdParser.parse(lines))
+    }
+
     private fun JsonObject.toLine(): BikeIdParser.OcrLine {
         val b = this["box"]!!.jsonArray.map { it.jsonPrimitive.int }
         return BikeIdParser.OcrLine(this["text"]!!.jsonPrimitive.content, b[0], b[1], b[2], b[3])
