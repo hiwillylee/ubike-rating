@@ -19,7 +19,8 @@ export function Scan({ onFound }: Props) {
 
   return (
     <div className="page">
-      <h1>查詢車況</h1>
+      <h1>還車了嗎？</h1>
+      <p className="hint">掃一下車號順手評分，下一位會感謝你</p>
 
       <button className="primary full scan-start" onClick={() => setCapturing(true)}>
         📷 拍攝車號

@@ -6,3 +6,7 @@ app-config.properties
 *.iml
 # 實拍車號照片含站點標籤，只能暫放測試用，不進版控
 app/src/androidTest/assets/bikeocr/
+
+# release 簽章金鑰與密碼，請自行備份，不進版控
+release.keystore
+keystore.properties

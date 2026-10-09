@@ -2,3 +2,5 @@
 apiUrl=https://xxxxxxxx.lambda-url.ap-northeast-1.on.aws
 cognitoRegion=ap-northeast-1
 cognitoClientId=xxxxxxxxxxxxxxxxxxxxxxxxxx
+# Google Cloud 主控台建立的 API 金鑰（啟用 Maps SDK for Android，建議限制為此 App 的套件名稱與簽章）
+googleMapsKey=

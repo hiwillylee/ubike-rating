@@ -1,6 +1,7 @@
 package tw.bikerating.ui
 
-import androidx.compose.foundation.BorderStroke
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,10 +36,23 @@ import kotlinx.coroutines.launch
 import tw.bikerating.data.ApiClient
 import tw.bikerating.data.AppException
 import tw.bikerating.data.BikeInfo
+import tw.bikerating.data.LOCATION_PERMISSIONS
 import tw.bikerating.data.METRICS
+import tw.bikerating.data.NearStation
+import tw.bikerating.data.Position
+import tw.bikerating.data.currentPosition
+import tw.bikerating.data.hasLocationPermission
+import tw.bikerating.data.timeAgo
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+/** 評分時的定位狀態 */
+private sealed interface Locating {
+    data object Idle : Locating
+    data object Busy : Locating
+    data class Done(val pos: Position?, val station: NearStation?) : Locating
+}
 
 private val timeFmt = DateTimeFormatter.ofPattern("MM/dd HH:mm").withZone(ZoneId.systemDefault())
 
@@ -56,6 +71,17 @@ fun BikeScreen(
     val form = remember { mutableStateMapOf<String, Int>() }
     var submitting by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    val context = LocalContext.current
+    var loc by remember { mutableStateOf<Locating>(Locating.Idle) }
+
+    // 開始評分時才定位（還車時評分，就能記下是哪一站）
+    fun locate() = scope.launch {
+        loc = Locating.Busy
+        val pos = currentPosition(context)
+        val station = pos?.let { runCatching { api.nearestStation(it) }.getOrNull() }
+        loc = Locating.Done(pos, station)
+    }
+    val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { locate() }
 
     LaunchedEffect(bikeId) {
         try {
@@ -73,9 +99,10 @@ fun BikeScreen(
             submitting = true
             message = null
             try {
-                info = api.rate(bikeId, form.toMap())
+                val r = api.rate(bikeId, form.toMap(), (loc as? Locating.Done)?.pos)
+                info = r
                 form.clear()
-                message = true to "已送出，謝謝！"
+                message = true to (r.station?.let { "已送出，記在${it.name}，謝謝！" } ?: "已送出，謝謝！")
             } catch (e: AppException) {
                 if (e.status == 401) onNeedLogin() else message = false to (e.message ?: "發生錯誤")
             } finally {
@@ -88,8 +115,15 @@ fun BikeScreen(
         modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = onBack) { Text("← 重新掃描") }
+        TextButton(onClick = onBack) { Text("← 返回") }
         Text("${bikeId.take(2)} ${bikeId.drop(2)}", fontSize = 36.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+        info?.location?.let {
+            Text(
+                "📍 上次在${it.station.name}還車 · ${timeAgo(it.at)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -125,7 +159,12 @@ fun BikeScreen(
                     val v = form[m.key]
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(m.label, style = MaterialTheme.typography.bodyMedium)
-                        StarInput(v, m.levels, onChange = { form[m.key] = it })
+                        StarInput(v, m.levels, onChange = {
+                            if (loc == Locating.Idle) {
+                                if (hasLocationPermission(context)) locate() else permLauncher.launch(LOCATION_PERMISSIONS)
+                            }
+                            form[m.key] = it
+                        })
                         if (v != null) {
                             Text(
                                 m.levels[v - 1],
@@ -135,10 +174,23 @@ fun BikeScreen(
                         }
                     }
                 }
+                val l = loc
+                if (l != Locating.Idle) {
+                    Text(
+                        when {
+                            l == Locating.Busy -> "📍 找找你在哪一站…"
+                            l is Locating.Done && l.station != null -> "📍 還車站：${l.station.name}"
+                            l is Locating.Done && l.pos != null -> "📍 附近沒有站點，分數照樣記錄"
+                            else -> "📍 沒拿到定位，分數照樣記錄"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 message?.let { (ok, text) ->
                     Text(text, color = if (ok) levelColor(4.0) else MaterialTheme.colorScheme.error)
                 }
-                Button(onClick = ::submit, enabled = complete && !submitting, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = ::submit, enabled = complete && !submitting && loc != Locating.Busy, modifier = Modifier.fillMaxWidth()) {
                     Text(if (submitting) "送出中…" else if (isLoggedIn) "送出評分" else "登入後送出")
                 }
             }

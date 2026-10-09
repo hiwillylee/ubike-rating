@@ -30,15 +30,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,57 +58,18 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import tw.bikerating.ocr.BikeIdAnalyzer
 import tw.bikerating.ocr.GUIDE_MAX_WIDTH_DP
 import tw.bikerating.ocr.GUIDE_RATIO
 import tw.bikerating.ocr.GUIDE_WIDTH
 import tw.bikerating.ocr.PaddleOcr
 import java.util.concurrent.Executors
-
-/** 首頁：「拍攝車號」打開全螢幕掃描，下面可以手動輸入 */
-@Composable
-fun ScanScreen(modifier: Modifier, onFound: (String) -> Unit, onCapture: () -> Unit) {
-    val context = LocalContext.current
-    // 先在背景載入 OCR 模型，打開掃描時就能馬上辨識
-    LaunchedEffect(Unit) { withContext(Dispatchers.Default) { runCatching { PaddleOcr.get(context) } } }
-
-    var input by remember { mutableStateOf("") }
-    val valid = Regex("^\\d{7}$").matches(input)
-
-    Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text("查詢車況", style = MaterialTheme.typography.headlineSmall)
-
-        Button(onClick = onCapture, modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
-            Text("📷 拍攝車號", fontSize = 18.sp)
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it.filter(Char::isDigit).take(7) },
-                placeholder = { Text("或手動輸入 7 碼車號") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { if (valid) onFound(input) }),
-                modifier = Modifier.weight(1f),
-            )
-            Button(onClick = { onFound(input) }, enabled = valid) { Text("查詢") }
-        }
-    }
-}
 
 private val Ink = Color(0xFF1D1D1B)
 

@@ -49,3 +49,36 @@ Base URL：`sam deploy` 輸出的 `ApiUrl`（Lambda Function URL）。回應都�
 ## GET /me
 
 需要登入。回傳 `{ "suspect": false, "todayCount": 5, "dailyLimit": 60 }`。
+
+## 還車站點與地圖
+
+POST /bikes/{id}/ratings 的 body 可以多帶 `lat`、`lng`（選填）。後端會找 100 公尺內最近的 YouBike 站點，只記站點編號，不存座標。回應會多一個 `station: { id, name, distance } | null`。GET /bikes/{id} 會多一個 `location: { station: { id, name }, at } | null`，代表最後一次有定位的還車站點。
+
+站點資料來自臺北市、新北市的 YouBike 2.0 開放資料，在 Lambda 記憶體快取 6 小時。
+
+### POST /stations/nearest
+
+公開。Body `{ "lat": 25.0261, "lng": 121.5437 }`，回傳 `{ "station": { "id", "name", "distance" } | null }`。用在評分前先顯示「還車站：XX」。
+
+### GET /map
+
+公開，快取 1 分鐘。只回傳最近 7 天有車在該站還車的站點：
+
+```json
+{
+  "excellentMin": 3.5,
+  "maxAgeDays": 7,
+  "stations": [
+    {
+      "id": "500101001", "name": "捷運科技大樓站", "lat": 25.02605, "lng": 121.5436,
+      "count": 2, "scores": { "clean": 3, "gear": 3.4, "frame": 3.5 }, "avg": 3.3,
+      "excellent": [{ "id": "1234567", "at": "...", "scores": { "clean": 4, "gear": 3.8, "frame": 4 } }]
+    }
+  ]
+}
+```
+
+- 每台車只算在它最後還車的站點。
+- `scores` 是這些車目前分數的平均。
+- 三項分數都 ≥ `excellentMin` 的車就是極品車。
+- 門檻可以用環境變數調整：`STATION_MATCH_METERS`、`MAP_MAX_AGE_DAYS`、`EXCELLENT_MIN`。

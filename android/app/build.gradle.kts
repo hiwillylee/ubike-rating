@@ -12,6 +12,12 @@ val appConfig = Properties().apply {
     val f = rootProject.file("app-config.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
+// release 簽章放在 android/keystore.properties（不進版控）
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 fun cfg(key: String, default: String = "") = "\"${appConfig.getProperty(key, default)}\""
 
 android {
@@ -34,11 +40,28 @@ android {
         buildConfigField("String", "API_URL", cfg("apiUrl"))
         buildConfigField("String", "COGNITO_REGION", cfg("cognitoRegion", "ap-northeast-1"))
         buildConfigField("String", "COGNITO_CLIENT_ID", cfg("cognitoClientId"))
+        // Google 地圖金鑰（Maps SDK for Android）
+        manifestPlaceholders["googleMapsKey"] = appConfig.getProperty("googleMapsKey", "")
+        buildConfigField("boolean", "HAS_MAPS_KEY", (appConfig.getProperty("googleMapsKey", "").isNotEmpty()).toString())
+    }
+
+    signingConfigs {
+        if (keystoreProps.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+            // R8 移除沒用到的程式碼與資源
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -48,6 +71,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+    }
+    // 原生函式庫壓縮後放進 APK（安裝時再解開），APK 小約 15 MB
+    packaging {
+        jniLibs { useLegacyPackaging = true }
     }
     buildFeatures {
         compose = true
@@ -72,6 +99,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.maps.compose)
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)

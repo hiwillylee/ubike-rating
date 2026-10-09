@@ -38,6 +38,7 @@ export async function submitRating(
   bikeId: string,
   scores: { clean: number; gear: number; frame: number },
   now: Date = new Date(),
+  station?: string,
 ): Promise<SubmitResult> {
   const nowSec = Math.floor(now.getTime() / 1000);
   const nowIso = now.toISOString();
@@ -72,7 +73,7 @@ export async function submitRating(
 
   const saved = await store.saveRating(
     bikeId,
-    { ...scores, at: nowIso, userId },
+    { ...scores, at: nowIso, userId, ...(station ? { station } : {}) },
     nowSec + cfg.sameBikeCooldownMinutes * 60,
     nowSec,
   );

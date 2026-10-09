@@ -23,10 +23,10 @@ import tw.bikerating.data.ApiClient
 import tw.bikerating.data.AuthRepo
 
 sealed interface Screen {
-    data object Scan : Screen
     data object Capture : Screen
     data class Bike(val id: String) : Screen
     data object Login : Screen
+    data object Map : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun App(auth: AuthRepo, api: ApiClient) {
     // 簡單的返回堆疊
-    val stack = remember { mutableStateListOf<Screen>(Screen.Scan) }
+    val stack = remember { mutableStateListOf<Screen>(Screen.Map) }
     val screen = stack.last()
     val email by auth.email.collectAsState()
     fun go(s: Screen) = stack.add(s)
@@ -80,11 +80,11 @@ fun App(auth: AuthRepo, api: ApiClient) {
     ) { padding ->
         val m = Modifier.padding(padding)
         when (screen) {
-            Screen.Scan -> ScanScreen(m, onFound = { go(Screen.Bike(it)) }, onCapture = { go(Screen.Capture) })
             Screen.Capture -> Unit
             is Screen.Bike -> BikeScreen(m, screen.id, api, isLoggedIn = email != null,
                 onNeedLogin = { go(Screen.Login) }, onBack = { back() })
             Screen.Login -> LoginScreen(m, auth, onDone = { back() })
+            Screen.Map -> MapScreen(m, api, onOpenBike = { go(Screen.Bike(it)) }, onScan = { go(Screen.Capture) })
         }
     }
 }

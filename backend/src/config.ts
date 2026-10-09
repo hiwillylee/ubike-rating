@@ -20,6 +20,11 @@ export const config = {
   sameBikeCooldownMinutes: num(process.env.SAME_BIKE_COOLDOWN_MINUTES, 30),
   dailySuspectThreshold: num(process.env.DAILY_SUSPECT_THRESHOLD, 60),
   hourlyViolationThreshold: num(process.env.HOURLY_VIOLATION_THRESHOLD, 5),
+
+  // 還車站點與地圖
+  stationMatchMeters: num(process.env.STATION_MATCH_METERS, 100), // GPS 離站點多近才算在該站還車
+  mapMaxAgeDays: num(process.env.MAP_MAX_AGE_DAYS, 7), // 超過幾天沒更新的位置不顯示在地圖上
+  excellentMin: num(process.env.EXCELLENT_MIN, 3.5), // 三項分數都達到這個值才算極品
 };
 
 export type Config = typeof config;

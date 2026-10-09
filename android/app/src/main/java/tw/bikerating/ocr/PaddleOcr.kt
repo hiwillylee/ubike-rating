@@ -21,6 +21,7 @@ import kotlin.math.roundToInt
  * - 偵測：縮放到 32 的倍數（ceil），輸入 RGB/255（不減 mean、不除 std），平面順序 B、G、R；
  *   機率圖門檻 0.03；框以 unclip 比例 1.5 向外擴張。
  * - 辨識：每個框縮放到高 48，CTC greedy decode，index 0 為 blank，字典 index 要減 1；平均信心 < 0.5 的行丟掉；
+ *   車號只有數字，解碼時只在 blank 與 0～9 之間取最大值（實拍時窄的 0 常被讀成 C、D、O）；
  *   中線相近的框併成同一行。
  * 與 JS 的差異：JS 用 OpenCV findContours + minAreaRect（可旋轉的框），這裡用連通區塊的軸對齊外接矩形。
  * 我們只辨識對準框內的小圖、文字大致水平，軸對齊就夠了。
@@ -38,6 +39,11 @@ class PaddleOcr private constructor(
     data class TextLine(val text: String, val mean: Float, val left: Int, val top: Int, val right: Int, val bottom: Int)
 
     private class Box(val left: Int, val top: Int, val right: Int, val bottom: Int)
+
+    /** 解碼時允許的輸出類別：blank (0) 與字典中 0～9 對應的類別（字典 index + 1） */
+    private val digitClasses: IntArray =
+        intArrayOf(0) + dictionary.indices.filter { dictionary[it].length == 1 && dictionary[it][0] in '0'..'9' }
+            .map { it + 1 }
 
     fun recognize(image: Bitmap): List<TextLine> {
         val input = Bitmap.createScaledBitmap(image, multipleOf32(image.width), multipleOf32(image.height), true)
@@ -147,7 +153,7 @@ class PaddleOcr private constructor(
         for (s in steps) {
             val probs = s as FloatArray
             var idx = 0
-            for (i in 1 until probs.size) if (probs[i] > probs[idx]) idx = i
+            for (i in digitClasses) if (probs[i] > probs[idx]) idx = i
             if (idx != 0 && idx != prev) {
                 sb.append(dictionary.getOrElse(idx - 1) { "" })
                 sum += probs[idx]

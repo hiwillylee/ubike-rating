@@ -7,6 +7,7 @@ export interface Rating {
   frame: number;
   at: string; // ISO 時間
   userId: string;
+  station?: string; // 還車站點編號（有 GPS 且在站點附近才有）
 }
 
 export type Scores = Record<Metric, number>;
